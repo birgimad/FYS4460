@@ -55,6 +55,8 @@ void gaussian_velocity_generator(mat (&velocity), int number_of_particles, doubl
   //standard_deviation = pow(k_B*Temperature / mass, 0.5);
   velocity.zeros();
   srand(time(NULL));
+  double k_B = 10;
+  double standard_deviation = pow(k_B*Temperature*mass,0.5);
   for (int i = 0; i < number_of_particles; i++)
   {
   static int iset = 0;
@@ -70,7 +72,7 @@ void gaussian_velocity_generator(mat (&velocity), int number_of_particles, doubl
     fac = sqrt(-2.*log(rsq)/rsq);
     gset = v1*fac;
     iset = 1;
-    velocity(i,j) = v2*fac;
+    velocity(i,j) = standard_deviation*v2*fac;
   }
   }
 } // end function for gaussian deviates
@@ -84,31 +86,19 @@ int main()
     mat r(N_c*N_c*N_c*4,3);
     mat v(N_c*N_c*N_c*4,3);
     gaussian_velocity_generator(v,N_c*N_c*N_c*4,T,mass);
-    //initial_fcc_position(b,N_c,r);
-    cout << v << endl;
+    initial_fcc_position(b,N_c,r);
 
-    /*
-    ofstream myfile ("a_initial_position_final.xyz");
+    ofstream myfile ("a_initial_state.xyz");
             if (myfile.is_open())
             {
                 myfile << N_c*N_c*N_c*4 << endl;    //number of atoms
                 myfile << "Position of argon atoms in fcc cell" << endl;
                 for (int i = 0; i < N_c*N_c*N_c*4; i++)
                 {
-                    myfile << "Ar" << setw(10) << r(i,0) << setw(10) << r(i,1) << setw(10) << r(i,2) << endl;
+                    myfile << "Ar" << setw(10) << r(i,0) << setw(10) << r(i,1) << setw(10) << r(i,2) << setw(10) << v(i,0) << setw(10) << v(i,1) << setw(10) << v(i,2) << endl;
                 }
             }
-    */
-    ofstream myfile ("a_initial_velocit_mean0y_std1.txt");
-            if (myfile.is_open())
-            {
-                myfile << "Initial Velocity, Mean = 0, Std = 1" << endl;
-                myfile << "v_x" << "," << "v_y" << "," << "v_z" << endl;
-                for (int i = 0; i < N_c*N_c*N_c*4; i++)
-                {
-                    myfile << v(i,0) << "," << v(i,1) << "," << v(i,2) << endl;
-                }
-            }
+
     return 0;
 }
 
