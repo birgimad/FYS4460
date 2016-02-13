@@ -79,7 +79,6 @@ void gaussian_velocity_generator(mat (&velocity), int number_of_particles, doubl
 
 int main()
 {
-
     double b = 5.260; //lattice constant for Argon in Å
     double N_c = 8; //Number of cells in x, y and z direction (cubic unit cell)
     double T = 100.0;
@@ -108,12 +107,7 @@ int main()
     F_temp.zeros();
     mat F(N_c*N_c*N_c*4,3);  //
     F.zeros();
-/*
-    int FileNumber = 0;
-    int number_of_timesteps = 10;
-    for (int filecounter = 0; filecounter < number_of_timesteps; filecounter++)
-    {
-*/
+
     for (int i = 0; i < N_c*N_c*N_c*4; i++)     //Loop for one integration over all particles
     {
         for (int j = 0; j < N_c*N_c*N_c*4; j++)
@@ -139,25 +133,6 @@ int main()
             F(i,k) = 0; //setting U_i = 0, hnece do not include (9)
         }
     }
-/*
-    //generating datafiles:
-    ofstream myfile;
-        FileNumber++;
-            string fileName = "DataFile_for_c3" + to_string(FileNumber) + ".xyz";
-
-            cout << "File Name is " << fileName << endl;
-            myfile.open(fileName, ios::app);    //open file
-            myfile << N_c*N_c*N_c*4 << endl;    //number of atoms
-            myfile << "Position of argon atoms in fcc cell after one integration" << endl;
-            for (int i = 0; i < N_c*N_c*N_c*4; i++)
-            {
-                myfile << "Ar" << setw(20) << r(i,0) << setw(20) << r(i,1) << setw(20) << r(i,2) << setw(20) << v(i,0) << setw(20) << v(i,1) << setw(20) << v(i,2) << endl;
-            }
-            myfile.close(); //close file
-
-    }
-*/
-    //cout << r << endl;
 
 /*
     ofstream myfile ("c_state_after_one_integration_2.xyz");
@@ -174,5 +149,4 @@ int main()
 
     return 0;
 }
-
 
