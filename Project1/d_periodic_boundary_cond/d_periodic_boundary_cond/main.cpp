@@ -84,13 +84,16 @@ int main()
     double T = 100.0;
     double mass = 39.948;
     double dt = 10;
-    mat r(N_c*N_c*N_c*4,3);
+    mat r(N_c*N_c*N_c*4,3);     //mult volume by 4, since there are 4 atoms in each fcc cell
     mat v(N_c*N_c*N_c*4,3);
     gaussian_velocity_generator(v,N_c*N_c*N_c*4,T,mass);
     initial_fcc_position(b,N_c,r);
-/*
+
+    int FileNumber = 0;
+    int number_of_timesteps = 100;
+
     //saving initial state
-    ofstream myfile ("DataFile_for_c3_initial_state.xyz");
+    ofstream myfile ("DataFile_for_d_initial_state_with_periodic_bound.xyz");
             if (myfile.is_open())
             {
                 myfile << N_c*N_c*N_c*4 << endl;    //number of atoms
@@ -100,13 +103,17 @@ int main()
                     myfile << "Ar" << setw(20) << r(i,0) << setw(20) << r(i,1) << setw(20) << r(i,2) << setw(20) << v(i,0) << setw(20) << v(i,1) << setw(20) << v(i,2) << endl;
                 }
             }
-*/
+
 
     double dr, r_inverted, r_inverted_6, r_inverted_12;
     vec r_vec(3), F_temp(3);
     F_temp.zeros();
-    mat F(N_c*N_c*N_c*4,3);  //
+    mat F(N_c*N_c*N_c*4,3);
     F.zeros();
+    int unit_cell_size = N_c*b; //For periodic boundary condition
+
+    for (int filecounter = 0; filecounter < number_of_timesteps; filecounter++) //for number_of_timesteps_integrations
+    {
 
     for (int i = 0; i < N_c*N_c*N_c*4; i++)     //Loop for one integration over all particles
     {
@@ -126,12 +133,39 @@ int main()
             }
             }
         }
-        for (int k = 0; k < 3; k++)
+        for (int k = 0; k < 3; k++) //looping over the three spacial coordinates
         {
             v(i,k) += F(i,k) / (2*mass) *dt;
             r(i,k) += v(i,k) *dt;
             F(i,k) = 0; //setting U_i = 0, hnece do not include (9)
+
+            //Periodic boundary conditions:
+            //Check whether particle has gone through side of box every time the position is updated.
+            if (r(i,k) < 0)
+            {
+                r(i,k) = fmod(r(i,k),unit_cell_size) + unit_cell_size;     //r_i % unit_cell_size;
+            }
+            if (r(i,k) >= N_c*b )
+            {
+                r(i,k) = fmod(r(i,k),unit_cell_size);     //r_i % unit_cell_size;
+            }
         }
+
+    }
+
+    ofstream myfile;
+        FileNumber++;
+            string fileName = "DataFile_for_d_with_periodic_bound" + to_string(FileNumber) + ".xyz";
+
+            cout << "File Name is " << fileName << endl;
+            myfile.open(fileName, ios::app);
+            myfile << N_c*N_c*N_c*4 << endl;    //number of atoms
+            myfile << "Position of argon atoms in fcc cell after one integration" << endl;
+            for (int i = 0; i < N_c*N_c*N_c*4; i++)
+            {
+                myfile << "Ar" << setw(20) << r(i,0) << setw(20) << r(i,1) << setw(20) << r(i,2) << setw(20) << v(i,0) << setw(20) << v(i,1) << setw(20) << v(i,2) << endl;
+            }
+            myfile.close();
     }
 
 /*
