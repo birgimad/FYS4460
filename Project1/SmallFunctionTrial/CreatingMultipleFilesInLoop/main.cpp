@@ -58,7 +58,7 @@ double dr_x, dr_y, dr_z, dr;
     {
     for (int box_y = 0; box_y < number_of_cells; box_y++)
     {
-    for (int box_z = 0; box_z < 1; box_z++) //number_of_cells
+    for (int box_z = 0; box_z < number_of_cells; box_z++)
     {
         for (int atom_in_box = 0; atom_in_box < fourthList[box_x][box_y][box_z].size(); atom_in_box++)
         {
