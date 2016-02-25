@@ -110,31 +110,44 @@ double force_calculation(mat (&F), mat r, double N_c, double b, double sigma, in
 {
     double dr, r_inverted, r_inverted_6, r_inverted_12, drx, dry, drz, cell_length, cell_length_half;
     cell_length = N_c * b;
-    cell_length_half = cell_length / 2;
+    cell_length_half = cell_length*0.5;
     vec r_vec(3), F_temp(3);
     F_temp.zeros();
-    for (int j = i; j < N_c*N_c*N_c*4; j++)  //
+    r_vec.zeros();
+    for (int j = i+1; j < N_c*N_c*N_c*4; j++)  //
     {
         //Consider only shortest distance bewteen two particles
         drx = r(i,0)-r(j,0);
-        if (abs(drx) > cell_length_half)
+        if (drx > cell_length_half)
         {
             drx -= cell_length;
         }
+        if (drx < -cell_length_half)
+        {
+            drx += cell_length;
+        }
         dry = r(i,1)-r(j,1);
-        if (abs(dry) > cell_length_half)
+        if (dry > cell_length_half)
         {
             dry -= cell_length;
         }
+        if (dry < -cell_length_half)
+        {
+            dry += cell_length;
+        }
         drz = r(i,2)-r(j,2);
-        if (abs(drz) > cell_length_half)
+        if (drz > cell_length_half)
         {
             drz -= cell_length;
+        }
+        if (drz < -cell_length_half)
+        {
+            drz += cell_length;
         }
 
         dr = drx*drx + dry*dry + drz*drz;
 
-        if (dr != 0 && dr < 3) //include critical distance. However, this is not the day to do it! Make lists instead!!
+        if (dr > pow(10,-3)  && dr < 3) //include critical distance. However, this is not the way to do it! Make lists instead!! && dr < 3
         {
         r_inverted = 1 / dr;
         r_inverted_6 = r_inverted * r_inverted * r_inverted;
@@ -142,11 +155,77 @@ double force_calculation(mat (&F), mat r, double N_c, double b, double sigma, in
         for (int k = 0; k < 3; k++)
         {
             r_vec(k) = (r(j,k) - r(i,k));
-            F_temp(k) = 24 * (2 * r_inverted_12 - r_inverted_6) * r_inverted * r_vec(k);    //do not mult by 24 in the loop
-            F(i,k) += F_temp(k);
-            F(j,k) += F_temp(k);
+            F_temp(k) = 24.0 * (2.0 * r_inverted_12 - r_inverted_6) * r_inverted * r_vec(k);    //do not mult by 24 in the loop
+            F(i,k) -= F_temp(k);
+            F(j,k) += F_temp(k);    //må jo virke modsat på i.... Jeg er dog i tvivl om fortegn
         }
         }
+    }
+}
+
+double kin_en_calculation(mat v, vec (&kin_en), int number_of_particles, double mass)
+{
+    kin_en.zeros();
+    for (int i=0; i<number_of_particles; i++)
+    {
+        for (int k=0; k<3; k++)
+        {
+            kin_en(i) += v(i,k)*v(i,k);
+        }
+        kin_en(i) = 0.5*mass*kin_en(i);
+    }
+}
+
+double pot_en_calculation(mat r, vec (&Pot_en), int number_of_particles, double b, double N_c)
+{
+    double dr, r_inverted, r_inverted_6, r_inverted_12, drx, dry, drz, cell_length, cell_length_half;
+    cell_length = N_c * b;
+    cell_length_half = cell_length / 2;
+    Pot_en.zeros();
+    for (int i = 0; i < number_of_particles; i++)
+    {
+    for (int j = i+1; j < number_of_particles; j++)  //
+    {
+        //Consider only shortest distance bewteen two particles
+        drx = r(i,0)-r(j,0);
+        if (drx > cell_length_half)
+        {
+            drx -= cell_length;
+        }
+        if (drx < -cell_length_half)
+        {
+            drx += cell_length;
+        }
+        dry = r(i,1)-r(j,1);
+        if (dry > cell_length_half)
+        {
+            dry -= cell_length;
+        }
+        if (dry < -cell_length_half)
+        {
+            dry += cell_length;
+        }
+        drz = r(i,2)-r(j,2);
+        if (drz > cell_length_half)
+        {
+            drz -= cell_length;
+        }
+        if (drz < -cell_length_half)
+        {
+            drz += cell_length;
+        }
+
+        dr = drx*drx + dry*dry + drz*drz;
+
+        if (dr > pow(10,-3) && dr < 3) //include critical distance. However, this is not the day to do it! Make lists instead!! && dr < 3
+        {
+        r_inverted = 1 / dr;
+        r_inverted_6 = r_inverted * r_inverted * r_inverted;
+        r_inverted_12 = r_inverted_6 * r_inverted_6;
+        Pot_en(i) += 4.0*(r_inverted_12 - r_inverted_6);
+        Pot_en(j) += 4.0*(r_inverted_12 - r_inverted_6);
+        }
+    }
     }
 }
 
@@ -159,86 +238,89 @@ int main()
     double F0 = epsilon/sigma;
     double t0 = sigma*pow(m_Ar/epsilon,0.5);
     double b = 5.260/sigma; //lattice constant for Argon in Å
-    double N_c = 8; //Number of cells in x, y and z direction (cubic unit cell), 8
+    double N_c = 4; //Number of cells in x, y and z direction (cubic unit cell), 8
     double T = 100.0/epsilon;
     double mass = 39.948/m_Ar;
-    double dt = pow(10,-7)/t0;
+    double dt = pow(10,-5)/t0;
     cout << "dt = " << dt << endl;
     int number = 1;
-    mat r(N_c*N_c*N_c*4,3);     //mult volume by 4, since there are 4 atoms in each fcc cell
-    mat v(N_c*N_c*N_c*4,3);
+    double number_of_particles = N_c*N_c*N_c*4;
+    mat r(number_of_particles,3);     //mult volume by 4, since there are 4 atoms in each fcc cell
+    mat v(number_of_particles,3);
     double std_avvik = 10;
     //gaussian_velocity_generator(v,N_c*N_c*N_c*4,T,mass);
-    uniform_vel_generator(v,N_c*N_c*N_c*4,std_avvik);
+    uniform_vel_generator(v,number_of_particles,std_avvik);
     initial_fcc_position(b,N_c,r);
+    vec kin_en(number_of_particles);
+    vec pot_en(number_of_particles);
+    double kin_en_tot, pot_en_tot;
 
     int FileNumber = 0;
-    int number_of_timesteps = 5000;
+    int number_of_timesteps = 500001;
 
-
-
-
-
-
-
-/*
-    //saving initial state
-    ofstream myfile ("DataFile_for_d_initial_state_with_periodic_bound.xyz");
-            if (myfile.is_open())
-            {
-                myfile << N_c*N_c*N_c*4 << endl;    //number of atoms
-                myfile << "Position of argon atoms in fcc cell after one integration" << endl;
-                for (int i = 0; i < N_c*N_c*N_c*4; i++)
-                {
-                    myfile << "Ar" << setw(20) << r(i,0) << setw(20) << r(i,1) << setw(20) << r(i,2) << setw(20) << v(i,0) << setw(20) << v(i,1) << setw(20) << v(i,2) << endl;
-                }
-            }
-*/
-
-    ofstream myfile ("DataFile_Velocities_initial_state.txt");
-            if (myfile.is_open())
-            {
-                for (int i = 0; i < N_c*N_c*N_c*4; i++)
-                {
-                    myfile << v(i,0) << setw(20) << v(i,1) << setw(20) << v(i,2) << endl;
-                }
-            }
-
-    mat F(N_c*N_c*N_c*4,3);
+    mat F(number_of_particles,3);
     F.zeros();
     double unit_cell_size = N_c*b; //For periodic boundary condition
 
+
+    ofstream myfile;
+            string fileNameKin = "Kin_en7.txt";
+            cout << "File Name is " << fileNameKin << endl;
+            myfile.open(fileNameKin, ios::app);
+            myfile << "Number of particles: " << number_of_particles << endl;
+            myfile << "dt = " << dt << endl;
+            myfile << "Number of timesteps: " << number_of_timesteps << endl;
+            myfile.close();
+
+    //ofstream myfile;
+            string fileNameEnergy = "Tot_en7.txt";
+            cout << "File Name is " << fileNameEnergy << endl;
+            myfile.open(fileNameEnergy, ios::app);
+            myfile << "Number of particles: " << number_of_particles << endl;
+            myfile << "dt = " << dt << endl;
+            myfile << "Number of timesteps: " << number_of_timesteps << endl;
+            myfile.close();
+
     for (int filecounter = 0; filecounter < number_of_timesteps; filecounter++) //for number_of_timesteps_integrations
     {
-
-    for (int i = 0; i < N_c*N_c*N_c*4; i++)     //Loop for one integration over all particles
+    F.zeros(); //putting the force to zero for every time, the simulation is run
+    for (int i = 0; i < number_of_particles; i++)     //Loop for one integration over all particles
     {
         force_calculation(F,r,N_c,b,sigma,i);
         for (int k = 0; k < 3; k++) //looping over the three spacial coordinates
         {
-            v(i,k) += (F(i,k) / (2*mass)) *dt;    //eq (7). Temp v_i
+            v(i,k) += 0.5*(F(i,k) / (mass)) *dt;    //eq (7). Temp v_i
             r(i,k) += v(i,k) *dt;   //eq (8). New r_i
 
-                //Periodic boundary conditions:
-                //Check whether particle has gone through side of box every time the position is updated.
-                if (r(i,k) < 0)
-                {
-                    r(i,k) = fmod(r(i,k),unit_cell_size) + unit_cell_size;     //r_i % unit_cell_size;
-                }
-                if (r(i,k) >= N_c*b )
-                {
-                    r(i,k) = fmod(r(i,k),unit_cell_size);     //r_i % unit_cell_size;
-                }
-
-            force_calculation(F,r,N_c,b,sigma,i); //eq (9). Calculate F_i(t+dt)
-            v(i,k) += (F(i,k) / (2*mass)) *dt;
+            //Periodic boundary conditions:
+            //Check whether particle has gone through side of box every time the position is updated.
+            if (r(i,k) < 0)
+            {
+                r(i,k) = fmod(r(i,k),unit_cell_size) + unit_cell_size;     //r_i % unit_cell_size;
+            }
+            if (r(i,k) >= N_c*b )
+            {
+                r(i,k) = fmod(r(i,k),unit_cell_size);     //r_i % unit_cell_size;
+            }
         }
-
     }
-/*
+    F.zeros();  //putting the force to zero s.a. new force can be calculated for all particles
+    for (int i = 0; i < number_of_particles; i++)     //Loop for one integration over all particles
+    {
+        force_calculation(F,r,N_c,b,sigma,i); //eq (9). Calculate F_i(t+dt)
+        for (int k = 0; k < 3; k++) //looping over the three spacial coordinates
+        {
+            v(i,k) += 0.5*(F(i,k) / (mass)) *dt;
+        }
+    }
+
+
+//save position
+    if ( (filecounter % 10000) == 0)
+    {
     ofstream myfile;
         FileNumber++;
-            string fileName = "DataFile_for_d_with_periodic_bound" + to_string(FileNumber) + ".xyz";
+            string fileName = "Position7_" + to_string(FileNumber) + ".xyz";
 
             cout << "File Name is " << fileName << endl;
             myfile.open(fileName, ios::app);
@@ -249,23 +331,46 @@ int main()
                 myfile << "Ar" << setw(20) << r(i,0) << setw(20) << r(i,1) << setw(20) << r(i,2) << setw(20) << v(i,0) << setw(20) << v(i,1) << setw(20) << v(i,2) << endl;
             }
             myfile.close();
-*/
-    if ((number % 500) == 0)
+    }
+
+
+//save velocity
+    if ((filecounter % 100000) == 0)
     {
     ofstream myfile;
-        FileNumber++;
-            string fileName = "Datafile_velocities" + to_string(number) + ".txt";
-            cout << "File Name is " << fileName << endl;
-            myfile.open(fileName, ios::app);
+            string fileNameVel = "Datafile_velocities7_" + to_string(filecounter) + ".txt";
+            myfile.open(fileNameVel, ios::app);
             for (int i = 0; i < N_c*N_c*N_c*4; i++)
             {
                 myfile << v(i,0) << setw(20) << v(i,1) << setw(20) << v(i,2) << endl;
             }
             myfile.close();
     }
-    number += 1;
-    }
 
+
+//print energy
+    if (filecounter % 5000 == 0)
+    {
+    kin_en.zeros();
+    pot_en.zeros();
+    kin_en_calculation(v,kin_en,number_of_particles,mass);
+    pot_en_calculation(r,pot_en,number_of_particles,b,N_c);
+    pot_en_tot = 0,
+    kin_en_tot = 0;
+    for (int i = 0; i < number_of_particles; i++)
+    {
+        pot_en_tot += pot_en(i);
+        kin_en_tot += kin_en(i);
+    }
+    cout << "Total fin en: " << -pot_en_tot + kin_en_tot << setw(20) << pot_en_tot + kin_en_tot << endl;
+    myfile.open(fileNameKin, ios::app);
+    myfile << filecounter << setw(10) << kin_en_tot << endl;
+    myfile.close();
+    myfile.open(fileNameEnergy, ios::app);
+    myfile << filecounter << setw(10) << -pot_en_tot + kin_en_tot << setw(10) << pot_en_tot + kin_en_tot << endl;
+    myfile.close();
+    }
+    }
     cout << "end" << endl;
     return 0;
 }

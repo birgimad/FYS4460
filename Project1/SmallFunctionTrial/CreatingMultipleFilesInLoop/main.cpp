@@ -9,9 +9,22 @@ using namespace arma;
 
 
 
-
-
 int main()
+{
+    double unit_cell_size = 4;
+    double r = 0.11;
+    if (r < 0)
+    {
+        r = fmod(r,unit_cell_size) + unit_cell_size;     //r_i % unit_cell_size;
+    }
+    if (r >= unit_cell_size )
+    {
+        r = fmod(r,unit_cell_size);     //r_i % unit_cell_size;
+    }
+    cout << r << endl;
+}
+
+int hej()
 {
     int number_of_atoms = 5;
     mat r(number_of_atoms,3);       //3-D
@@ -24,6 +37,8 @@ int main()
     double length_of_unit_cell = 4;
     double length_of_rc_cell = 1;
     int number_of_cells = length_of_unit_cell / length_of_rc_cell;
+    int Nabo_x_value, Nabo_y_value, Nabo_z_value, Nabo_number;
+    double dr_x, dr_y, dr_z, dr;
 
     vector<int> firstList;
     vector< vector <int> > secondList;
@@ -43,6 +58,19 @@ int main()
     }
     //putting atoms in correct cells
     int cell_number_x, cell_number_y, cell_number_z;
+    for (int t = 0; t < 2; t++)
+    {
+    for (int x = 0; x < number_of_cells; x++)
+    {
+        for (int y = 0; y < number_of_cells; y++)
+        {
+            for (int z = 0; z < number_of_cells; z++)
+            {
+                fourthList[x][y][z].clear();
+            }
+        }
+    }
+
     for (int i = 0; i < number_of_atoms; i++)
     {
     cell_number_x = (r(i,0) / length_of_unit_cell) *number_of_cells;
@@ -50,9 +78,7 @@ int main()
     cell_number_z = (r(i,2) / length_of_unit_cell) *number_of_cells;
     fourthList[cell_number_x][cell_number_y][cell_number_z].push_back(i);
     }
-
-int Nabo_x_value, Nabo_y_value, Nabo_z_value, Nabo_number;
-double dr_x, dr_y, dr_z, dr;
+    }
 
     for (int box_x = 0; box_x < number_of_cells; box_x++)
     {
